@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Scorecard</title>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0b1118; color: #ffffff; padding: 10px; font-size: 13px; }
+        
+        .score-card {
+            background: #121b26;
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        /* 🔥 UPCOMING MATCH UI STYLING (Match start hone se pehle) */
+        .upcoming-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 15px;
+            text-align: center;
+            background: #121b26;
+            border-radius: 10px;
+        }
+
+        .upcoming-team {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            flex: 1;
+        }
+
+        .upcoming-status-center {
+            flex: 1.2;
+        }
+
+        .upcoming-title {
+            font-size: 15px;
+            color: #10b981;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .upcoming-time {
+            font-size: 13px;
+            color: #9ca3af;
+            font-weight: 600;
+        }
+
+        /* LIVE SCORECARD STYLING */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .match-title { font-size: 15px; font-weight: 700; color: #ffffff; }
+        
+        .main-score-box { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px; }
+        .team-name { font-size: 16px; font-weight: 700; color: #cbd5e1; }
+        
+        .score-row { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+        .score-val { font-size: 28px; font-weight: 800; color: #10b981; }
+        .overs-val { font-size: 15px; color: #9ca3af; font-weight: 600; }
+        
+        .event-status { 
+            font-size: 22px; font-weight: 800; color: #facc15; 
+            text-align: right; line-height: 1.1;
+        }
+
+        .rates-target-bar { 
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; color: #9ca3af; margin: 12px 0 6px 0; font-weight: 600; 
+        }
+        .rates-left { display: flex; gap: 10px; }
+        .target-val { color: #ffffff; font-weight: 700; }
+
+        .status-msg { 
+            font-size: 13px; color: #facc15; text-align: center; 
+            margin: 8px 0 12px 0; font-weight: 700; 
+        }
+
+        .over-summary {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #0d1520; padding: 8px 12px; border-radius: 6px;
+            margin-bottom: 12px; font-weight: 700; font-size: 13px;
+        }
+        .balls-inline { display: flex; gap: 10px; color: #ffffff; }
+        .over-total { color: #ffffff; font-weight: 800; }
+
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .stats-table th { text-align: right; color: #9ca3af; font-size: 11px; padding-bottom: 6px; font-weight: 600; }
+        .stats-table th:first-child { text-align: left; }
+        .stats-table td { text-align: right; padding: 4px 0; font-weight: 600; font-size: 13px; color: #e2e8f0; }
+        .stats-table td:first-child { text-align: left; color: #fff; }
+        
+        .striker-icon { color: #f97316; margin-left: 3px; font-size: 11px; }
+
+        .extra-stats-box { 
+            display: flex; justify-content: space-between; 
+            margin: 14px 0 10px 0; padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.06); 
+            color: #9ca3af; font-size: 12px; font-weight: 600;
+        }
+
+        .bowler-table-container { margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="score-card">
+
+    <!-- 🔥 1. UPCOMING MATCH UI CONTAINER (IMAGE REF LIKE) -->
+    <div id="upcomingSection" class="upcoming-box" style="display: none;">
+        <div class="upcoming-team" id="upTeam1">--</div>
+        <div class="upcoming-status-center">
+            <div class="upcoming-title">Starts At</div>
+            <div class="upcoming-time" id="upMatchTime">--</div>
+        </div>
+        <div class="upcoming-team" id="upTeam2">--</div>
+    </div>
+
+    <!-- 🔥 2. LIVE SCORECARD SECTION -->
+    <div id="liveSection" style="display: block;">
+        <div class="header">
+            <span class="match-title" id="matchHeader">Loading Match...</span>
+        </div>
+
+        <div class="main-score-box">
+            <div>
+                <div class="team-name" id="activeTeam">--</div>
+                <div class="score-row">
+                    <span class="score-val" id="teamScore">0-0</span>
+                    <span class="overs-val" id="teamOvers">0.0</span>
+                </div>
+            </div>
+            <div class="event-status" id="liveCommentary">--</div>
+        </div>
+
+        <div class="rates-target-bar">
+            <div class="rates-left">
+                <div>CRR: <span id="crr" style="color:#fff">0.00</span></div>
+                <div id="rrrBox">RRR: <span id="rrr" style="color:#fff">--</span></div>
+            </div>
+            <div id="targetBox" style="display: none;">
+                Target: <span class="target-val" id="targetVal">0</span>
+            </div>
+        </div>
+
+        <div class="status-msg" id="scoreStatus">--</div>
+
+        <div class="over-summary">
+            <span style="color:#9ca3af;" id="overTitle">Over --</span>
+            <div class="balls-inline" id="ballsList"></div>
+            <div class="over-total" id="overTotal">= 0</div>
+        </div>
+
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Batter</th>
+                    <th>R (B)</th>
+                    <th>4s</th>
+                    <th>6s</th>
+                    <th>SR</th>
+                </tr>
+            </thead>
+            <tbody id="batsmenBody"></tbody>
+        </table>
+
+        <div class="extra-stats-box">
+            <div>P'ship <strong id="pshipVal" style="color:#fff">--</strong></div>
+            <div>Last wkt: <strong id="lastWktVal" style="color:#fff">--</strong></div>
+        </div>
+
+        <div class="bowler-table-container">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Bowler</th>
+                        <th>W-R</th>
+                        <th>Over</th>
+                        <th>Econ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="bowlerName">--</td>
+                        <td id="bowlerWR">0-0</td>
+                        <td id="bowlerOvers">0.0</td>
+                        <td id="bowlerEcon">0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="http://localhost:5001/socket.io/socket.io.js"></script>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchName = urlParams.get('matchName') || "West Indies v Pakistan";
+    const date = urlParams.get('date') || "2026-07-27";
+
+    document.getElementById('matchHeader').innerText = matchName;
+
+    const socket = io('http://localhost:5001');
+
+    // Helper: Formats ISO date to readable time (e.g., Today 07:30 PM)
+    function formatUpcomingTime(timeStr) {
+        if (!timeStr) return "Today 07:30 PM";
+        try {
+            const dateObj = new Date(timeStr);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            }
+        } catch (e) {}
+        return timeStr;
+    }
+
+    socket.on('connect', () => {
+        socket.emit('joinMatch', { matchName, date });
+    });
+
+    socket.on('scoreUpdate', (data) => {
+        if (!data) return;
+
+        const liveSection = document.getElementById('liveSection');
+        const upcomingSection = document.getElementById('upcomingSection');
+
+        // 🔥 SWITCH BETWEEN UPCOMING UI AND LIVE SCORECARD
+        if (data.isLive === false) {
+            liveSection.style.display = 'none';
+            upcomingSection.style.display = 'flex';
+
+            const teams = (data.eventName || matchName).split(/ v | vs | V\/s /i);
+            document.getElementById('upTeam1').innerText = teams[0] ? teams[0].trim() : 'Team A';
+            document.getElementById('upTeam2').innerText = teams[1] ? teams[1].trim() : 'Team B';
+            document.getElementById('upMatchTime').innerText = `Today ${formatUpcomingTime(data.eventTime)}`;
+            return;
+        }
+
+        // Live Data Active
+        upcomingSection.style.display = 'none';
+        liveSection.style.display = 'block';
+
+        // 1. Team Name & Main Score
+        const activeTeamName = data.Team2Score ? (data.Team2Name_Short || data.Team2) : (data.Team1Name_Short || data.Team1);
+        const rawScore = data.Team2Score ? data.Team2Score : data.Team1Score;
+
+        document.getElementById('activeTeam').innerText = activeTeamName || '--';
+
+        if (rawScore) {
+            const oversMatch = rawScore.match(/\((.*?)\)/);
+            const overs = oversMatch ? oversMatch[1] : '0.0';
+            const scoreOnly = rawScore.replace(/\s*\(.*?\)\s*/g, '').trim();
+
+            document.getElementById('teamScore').innerText = scoreOnly;
+            document.getElementById('teamOvers').innerText = overs;
+        }
+
+        // 2. Commentary / Live Status
+        document.getElementById('liveCommentary').innerText = data.LiveCommentary || data.MatchStatus || "";
+
+        // 3. CRR & RRR
+        document.getElementById('crr').innerText = data.CRR || "0.00";
+        document.getElementById('rrr').innerText = data.RRR || "--";
+
+        // 4. Target Logic (+1 Target)
+        let calculatedTarget = 0;
+        if (data.Target || data.TargetRun) {
+            calculatedTarget = parseInt(data.Target || data.TargetRun);
+        } else if (data.Team2Score && data.Team1Score) {
+            const firstTeamRunsMatch = data.Team1Score.match(/\d+/); 
+            if (firstTeamRunsMatch) {
+                calculatedTarget = parseInt(firstTeamRunsMatch[0]) + 1;
+            }
+        }
+
+        const targetBox = document.getElementById('targetBox');
+        if (calculatedTarget > 0) {
+            document.getElementById('targetVal').innerText = calculatedTarget;
+            targetBox.style.display = 'block';
+        } else {
+            targetBox.style.display = 'none';
+        }
+
+        // 5. Match Status
+        document.getElementById('scoreStatus').innerText = data.ScoreStatus || "";
+
+        // 6. Over Level Summary
+        const currentOverNum = Math.floor(parseFloat(data.Overs || data.Team1Overs || 0));
+        document.getElementById('overTitle').innerText = `Over ${currentOverNum || '--'}`;
+
+        let ballsArr = [
+            data.CurrentOverBalls1, data.CurrentOverBalls2, data.CurrentOverBalls3,
+            data.CurrentOverBalls4, data.CurrentOverBalls5, data.CurrentOverBalls6
+        ];
+        
+        let ballsHTML = '';
+        let overTotalRuns = 0;
+
+        ballsArr.forEach(b => {
+            if (b !== undefined && b !== null && b.toString().trim() !== "") {
+                const bStr = b.toString().trim();
+                ballsHTML += `<span>${bStr}</span>`;
+                
+                const run = parseInt(bStr);
+                if (!isNaN(run)) overTotalRuns += run;
+            }
+        });
+        
+        document.getElementById('ballsList').innerHTML = ballsHTML || '<span>-</span>';
+        document.getElementById('overTotal').innerText = `= ${overTotalRuns}`;
+
+        // 7. Batsmen Stats
+        let batsmenHTML = `
+            <tr>
+                <td>${data.Player1 || '--'} <span class="striker-icon">🏏</span></td>
+                <td>${data.Player1Run || 0} (${data.Player1Balls || 0})</td>
+                <td>${data.Player1Fours || 0}</td>
+                <td>${data.Player1Sixes || 0}</td>
+                <td>${data.Player1StrikeRate || '0.0'}</td>
+            </tr>
+            <tr>
+                <td>${data.Player2 || '--'}</td>
+                <td>${data.Player2Run || 0} (${data.Player2Balls || 0})</td>
+                <td>${data.Player2Fours || 0}</td>
+                <td>${data.Player2Sixes || 0}</td>
+                <td>${data.Player2StrikeRate || '0.0'}</td>
+            </tr>
+        `;
+        document.getElementById('batsmenBody').innerHTML = batsmenHTML;
+
+        // 8. Partnership & Last Wicket
+        document.getElementById('pshipVal').innerText = data.Partnership || `${data.PartnershipRuns || 0} (${data.PartnershipBalls || 0})`;
+        document.getElementById('lastWktVal').innerText = data.LastWicket || `${data.LastWicketPlayer || '--'} ${data.LastWicketRuns || ''}`;
+
+        // 9. Bowler Stats
+        document.getElementById('bowlerName').innerText = data.Bowler || "--";
+        document.getElementById('bowlerWR').innerText = `${data.BowlerWickets || 0}-${data.BowlerRuns || 0}`;
+        document.getElementById('bowlerOvers').innerText = data.BowlerOvers || "0.0";
+        document.getElementById('bowlerEcon').innerText = data.BowlerEconomy || "0.00";
+    });
+</script>
+
+</body>
+</html>

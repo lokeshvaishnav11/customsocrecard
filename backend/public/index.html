@@ -18,7 +18,7 @@
             margin: 0 auto;
         }
 
-        /* 🔥 UPCOMING MATCH UI STYLING (Match start hone se pehle) */
+        /* UPCOMING MATCH UI */
         .upcoming-box {
             display: flex;
             justify-content: space-between;
@@ -29,31 +29,12 @@
             border-radius: 10px;
         }
 
-        .upcoming-team {
-            font-size: 16px;
-            font-weight: 700;
-            color: #ffffff;
-            flex: 1;
-        }
+        .upcoming-team { font-size: 16px; font-weight: 700; color: #ffffff; flex: 1; }
+        .upcoming-status-center { flex: 1.2; }
+        .upcoming-title { font-size: 15px; color: #10b981; font-weight: 700; margin-bottom: 4px; }
+        .upcoming-time { font-size: 13px; color: #9ca3af; font-weight: 600; }
 
-        .upcoming-status-center {
-            flex: 1.2;
-        }
-
-        .upcoming-title {
-            font-size: 15px;
-            color: #10b981;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .upcoming-time {
-            font-size: 13px;
-            color: #9ca3af;
-            font-weight: 600;
-        }
-
-        /* LIVE SCORECARD STYLING */
+        /* LIVE SCORECARD */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .match-title { font-size: 15px; font-weight: 700; color: #ffffff; }
         
@@ -64,10 +45,7 @@
         .score-val { font-size: 28px; font-weight: 800; color: #10b981; }
         .overs-val { font-size: 15px; color: #9ca3af; font-weight: 600; }
         
-        .event-status { 
-            font-size: 22px; font-weight: 800; color: #facc15; 
-            text-align: right; line-height: 1.1;
-        }
+        .event-status { font-size: 22px; font-weight: 800; color: #facc15; text-align: right; line-height: 1.1; }
 
         .rates-target-bar { 
             display: flex; justify-content: space-between; align-items: center;
@@ -76,10 +54,7 @@
         .rates-left { display: flex; gap: 10px; }
         .target-val { color: #ffffff; font-weight: 700; }
 
-        .status-msg { 
-            font-size: 13px; color: #facc15; text-align: center; 
-            margin: 8px 0 12px 0; font-weight: 700; 
-        }
+        .status-msg { font-size: 13px; color: #facc15; text-align: center; margin: 8px 0 12px 0; font-weight: 700; }
 
         .over-summary {
             display: flex; align-items: center; justify-content: space-between;
@@ -111,7 +86,7 @@
 
 <div class="score-card">
 
-    <!-- 🔥 1. UPCOMING MATCH UI CONTAINER (IMAGE REF LIKE) -->
+    <!-- 1. UPCOMING MATCH UI CONTAINER -->
     <div id="upcomingSection" class="upcoming-box" style="display: none;">
         <div class="upcoming-team" id="upTeam1">--</div>
         <div class="upcoming-status-center">
@@ -121,7 +96,7 @@
         <div class="upcoming-team" id="upTeam2">--</div>
     </div>
 
-    <!-- 🔥 2. LIVE SCORECARD SECTION -->
+    <!-- 2. LIVE SCORECARD CONTAINER -->
     <div id="liveSection" style="display: block;">
         <div class="header">
             <span class="match-title" id="matchHeader">Loading Match...</span>
@@ -200,11 +175,10 @@
 
 <script src="https://score.vkmster.com/socket.io/socket.io.js"></script>
 
-
 <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const matchName = urlParams.get('matchName') || "West Indies v Pakistan";
-    const date = urlParams.get('date') || "2026-07-27";
+    const matchName = urlParams.get('matchName') || "Sri Lanka Women v Pakistan Women";
+    const date = urlParams.get('date') || "2026-07-28";
 
     document.getElementById('matchHeader').innerText = matchName;
 
@@ -221,18 +195,27 @@
         return timeStr;
     }
 
-    // Helper: Runs & Overs extract karne ke liye
-    function parseScore(scoreStr) {
-        if (!scoreStr) return { runs: 0, wickets: 0, overs: 0, scoreOnly: '0-0', oversOnly: '0.0' };
+    // 🔥 SENIOR DEV SAFE SCORE CLEANER (Handles "SL-W 25-0 (4.0)" or "25-0 (4.0)")
+    function parseScoreObj(scoreStr) {
+        if (!scoreStr || typeof scoreStr !== 'string') {
+            return { runs: 0, wickets: 0, overs: 0, scoreOnly: '0-0', oversOnly: '0.0', raw: '' };
+        }
         
+        // Extract Overs inside brackets (4.0)
         const oversMatch = scoreStr.match(/\((.*?)\)/);
-        const oversOnly = oversMatch ? oversMatch[1] : '0.0';
-        const scoreOnly = scoreStr.replace(/\s*\(.*?\)\s*/g, '').trim();
+        const oversOnly = oversMatch ? oversMatch[1].trim() : '0.0';
 
-        const [runs, wickets] = scoreOnly.split('-').map(v => parseInt(v) || 0);
-        const oversFloat = parseFloat(oversOnly) || 0;
+        // Extract Runs-Wickets (25-0) removing Team Prefix
+        const cleanStr = scoreStr.replace(/\(.*?\)/g, '').trim(); 
+        const parts = cleanStr.split(/\s+/);
+        const scoreOnly = parts[parts.length - 1] || '0-0'; // Get last element ("25-0")
 
-        return { runs, wickets, overs: oversFloat, scoreOnly, oversOnly };
+        const runWkt = scoreOnly.split('-');
+        const runs = parseInt(runWkt[0]) || 0;
+        const wickets = parseInt(runWkt[1]) || 0;
+        const overs = parseFloat(oversOnly) || 0;
+
+        return { runs, wickets, overs, scoreOnly, oversOnly, raw: scoreStr };
     }
 
     socket.on('connect', () => {
@@ -245,7 +228,7 @@
         const liveSection = document.getElementById('liveSection');
         const upcomingSection = document.getElementById('upcomingSection');
 
-        // UPCOMING MATCH UI
+        // 1. UPCOMING MATCH CHECK
         if (data.isLive === false) {
             liveSection.style.display = 'none';
             upcomingSection.style.display = 'flex';
@@ -257,60 +240,71 @@
             return;
         }
 
-        // LIVE SCORECARD SECTION
+        // 2. LIVE MATCH ACTIVE
         upcomingSection.style.display = 'none';
         liveSection.style.display = 'block';
 
-        // Parse Both Teams Score & Overs
-        const t1 = parseScore(data.Team1Score);
-        const t2 = parseScore(data.Team2Score);
+        const t1 = parseScoreObj(data.Team1Score || data.Team1OnlyScore);
+        const t2 = parseScoreObj(data.Team2Score || data.Team2OnlyScore);
 
         let activeTeamName = "";
         let activeScore = null;
         let isSecondInning = false;
         let calculatedTarget = 0;
 
-        // 🔥 DYNAMIC BATTING DETECTION LOGIC 🔥
-        if (t2.overs > 0 || (t2.runs > 0 && t1.overs > 0)) {
-            // 2nd Inning Active (Team 2 Batting)
-            activeTeamName = data.Team2Name_Short || data.Team2 || "Team 2";
-            activeScore = t2;
+        // 🔥 DYNAMIC BATTING & INNING DETERMINATION LOGIC
+        const isT1Valid = t1.raw && t1.raw !== "";
+        const isT2Valid = t2.raw && t2.raw !== "";
+
+        if (isT1Valid && isT2Valid) {
+            // Both Teams Have Scores -> 2nd Innings Active!
             isSecondInning = true;
-            calculatedTarget = t1.runs + 1; // 1st Team Score + 1
+
+            // Jis team ke overs Chote hain (aur 0.0 se bada hai) wo BATTING kar rahi hai
+            if (t1.overs > 0 && t1.overs < t2.overs) {
+                // Team 1 Batting (e.g. SL-W 4.0 overs vs PAK-W 40.0 overs)
+                activeTeamName = data.Team1Name_Short || data.Team1Name || "Team 1";
+                activeScore = t1;
+                calculatedTarget = t2.runs + 1;
+            } else {
+                // Team 2 Batting
+                activeTeamName = data.Team2Name_Short || data.Team2Name || "Team 2";
+                activeScore = t2;
+                calculatedTarget = t1.runs + 1;
+            }
+        } else if (isT2Valid && (!isT1Valid || t1.overs === 0)) {
+            // Only Team 2 Has Active Score -> 1st Inning (Team 2 Batting)
+            activeTeamName = data.Team2Name_Short || data.Team2Name || "Team 2";
+            activeScore = t2;
+            isSecondInning = false;
         } else {
-            // 1st Inning Active (Team 1 Batting)
-            activeTeamName = data.Team1Name_Short || data.Team1 || "Team 1";
+            // Only Team 1 Has Score -> 1st Inning (Team 1 Batting)
+            activeTeamName = data.Team1Name_Short || data.Team1Name || "Team 1";
             activeScore = t1;
             isSecondInning = false;
-            calculatedTarget = 0; // 1st Inning me Target 0/Hide rahega
         }
 
-        // Explicit Target field support from API if available
-        if (data.Target || data.TargetRun) {
-            calculatedTarget = parseInt(data.Target || data.TargetRun);
-        }
-
-        // 1. Render Batting Team Score & Overs
+        // 3. RENDER ACTIVE BATTING TEAM SCORE
         document.getElementById('activeTeam').innerText = activeTeamName;
         document.getElementById('teamScore').innerText = activeScore.scoreOnly;
         document.getElementById('teamOvers').innerText = activeScore.oversOnly;
 
-        // 2. Target Display Logic
+        // 4. RENDER TARGET (Only in 2nd Innings)
         const targetBox = document.getElementById('targetBox');
-        if (calculatedTarget > 0 && isSecondInning) {
+        if (isSecondInning && calculatedTarget > 0) {
             document.getElementById('targetVal').innerText = calculatedTarget;
             targetBox.style.display = 'block';
         } else {
             targetBox.style.display = 'none';
         }
 
-        // 3. Commentary & Rates
+        // 5. RATES & COMMENTARY
         document.getElementById('liveCommentary').innerText = data.LiveCommentary || data.MatchStatus || "";
         document.getElementById('crr').innerText = data.CRR || "0.00";
         document.getElementById('rrr').innerText = data.RRR || "--";
         document.getElementById('scoreStatus').innerText = data.ScoreStatus || "";
 
-        // 4. Over Summary
+        // 6. OVER BALLS SUMMARY
         const currentOverNum = Math.floor(activeScore.overs);
         document.getElementById('overTitle').innerText = `Over ${currentOverNum || '--'}`;
 
@@ -335,7 +329,7 @@
         document.getElementById('ballsList').innerHTML = ballsHTML || '<span>-</span>';
         document.getElementById('overTotal').innerText = `= ${overTotalRuns}`;
 
-        // 5. Batsmen Stats
+        // 7. BATSMEN TABLE
         let batsmenHTML = `
             <tr>
                 <td>${data.Player1 || '--'} <span class="striker-icon">🏏</span></td>
@@ -354,11 +348,11 @@
         `;
         document.getElementById('batsmenBody').innerHTML = batsmenHTML;
 
-        // 6. Partnership & Wicket
+        // 8. PARTNERSHIP & LAST WICKET
         document.getElementById('pshipVal').innerText = data.Partnership || `${data.PartnershipRuns || 0} (${data.PartnershipBalls || 0})`;
         document.getElementById('lastWktVal').innerText = data.LastWicket || `${data.LastWicketPlayer || '--'} ${data.LastWicketRuns || ''}`;
 
-        // 7. Bowler Stats
+        // 9. BOWLER TABLE
         document.getElementById('bowlerName').innerText = data.Bowler || "--";
         document.getElementById('bowlerWR').innerText = `${data.BowlerWickets || 0}-${data.BowlerRuns || 0}`;
         document.getElementById('bowlerOvers').innerText = data.BowlerOvers || "0.0";

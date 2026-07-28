@@ -198,7 +198,8 @@
 
 </div>
 
-<script src="http://localhost:5001/socket.io/socket.io.js"></script>
+<script src="https://score.vkmster.com/socket.io/socket.io.js"></script>
+
 
 <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -207,9 +208,8 @@
 
     document.getElementById('matchHeader').innerText = matchName;
 
-    const socket = io('http://localhost:5001');
+    const socket = io('https://score.vkmster.com');
 
-    // Helper: Formats ISO date to readable time (e.g., Today 07:30 PM)
     function formatUpcomingTime(timeStr) {
         if (!timeStr) return "Today 07:30 PM";
         try {
@@ -219,6 +219,20 @@
             }
         } catch (e) {}
         return timeStr;
+    }
+
+    // Helper: Runs & Overs extract karne ke liye
+    function parseScore(scoreStr) {
+        if (!scoreStr) return { runs: 0, wickets: 0, overs: 0, scoreOnly: '0-0', oversOnly: '0.0' };
+        
+        const oversMatch = scoreStr.match(/\((.*?)\)/);
+        const oversOnly = oversMatch ? oversMatch[1] : '0.0';
+        const scoreOnly = scoreStr.replace(/\s*\(.*?\)\s*/g, '').trim();
+
+        const [runs, wickets] = scoreOnly.split('-').map(v => parseInt(v) || 0);
+        const oversFloat = parseFloat(oversOnly) || 0;
+
+        return { runs, wickets, overs: oversFloat, scoreOnly, oversOnly };
     }
 
     socket.on('connect', () => {
@@ -231,7 +245,7 @@
         const liveSection = document.getElementById('liveSection');
         const upcomingSection = document.getElementById('upcomingSection');
 
-        // 🔥 SWITCH BETWEEN UPCOMING UI AND LIVE SCORECARD
+        // UPCOMING MATCH UI
         if (data.isLive === false) {
             liveSection.style.display = 'none';
             upcomingSection.style.display = 'flex';
@@ -243,56 +257,61 @@
             return;
         }
 
-        // Live Data Active
+        // LIVE SCORECARD SECTION
         upcomingSection.style.display = 'none';
         liveSection.style.display = 'block';
 
-        // 1. Team Name & Main Score
-        const activeTeamName = data.Team2Score ? (data.Team2Name_Short || data.Team2) : (data.Team1Name_Short || data.Team1);
-        const rawScore = data.Team2Score ? data.Team2Score : data.Team1Score;
+        // Parse Both Teams Score & Overs
+        const t1 = parseScore(data.Team1Score);
+        const t2 = parseScore(data.Team2Score);
 
-        document.getElementById('activeTeam').innerText = activeTeamName || '--';
+        let activeTeamName = "";
+        let activeScore = null;
+        let isSecondInning = false;
+        let calculatedTarget = 0;
 
-        if (rawScore) {
-            const oversMatch = rawScore.match(/\((.*?)\)/);
-            const overs = oversMatch ? oversMatch[1] : '0.0';
-            const scoreOnly = rawScore.replace(/\s*\(.*?\)\s*/g, '').trim();
-
-            document.getElementById('teamScore').innerText = scoreOnly;
-            document.getElementById('teamOvers').innerText = overs;
+        // 🔥 DYNAMIC BATTING DETECTION LOGIC 🔥
+        if (t2.overs > 0 || (t2.runs > 0 && t1.overs > 0)) {
+            // 2nd Inning Active (Team 2 Batting)
+            activeTeamName = data.Team2Name_Short || data.Team2 || "Team 2";
+            activeScore = t2;
+            isSecondInning = true;
+            calculatedTarget = t1.runs + 1; // 1st Team Score + 1
+        } else {
+            // 1st Inning Active (Team 1 Batting)
+            activeTeamName = data.Team1Name_Short || data.Team1 || "Team 1";
+            activeScore = t1;
+            isSecondInning = false;
+            calculatedTarget = 0; // 1st Inning me Target 0/Hide rahega
         }
 
-        // 2. Commentary / Live Status
-        document.getElementById('liveCommentary').innerText = data.LiveCommentary || data.MatchStatus || "";
-
-        // 3. CRR & RRR
-        document.getElementById('crr').innerText = data.CRR || "0.00";
-        document.getElementById('rrr').innerText = data.RRR || "--";
-
-        // 4. Target Logic (+1 Target)
-        let calculatedTarget = 0;
+        // Explicit Target field support from API if available
         if (data.Target || data.TargetRun) {
             calculatedTarget = parseInt(data.Target || data.TargetRun);
-        } else if (data.Team2Score && data.Team1Score) {
-            const firstTeamRunsMatch = data.Team1Score.match(/\d+/); 
-            if (firstTeamRunsMatch) {
-                calculatedTarget = parseInt(firstTeamRunsMatch[0]) + 1;
-            }
         }
 
+        // 1. Render Batting Team Score & Overs
+        document.getElementById('activeTeam').innerText = activeTeamName;
+        document.getElementById('teamScore').innerText = activeScore.scoreOnly;
+        document.getElementById('teamOvers').innerText = activeScore.oversOnly;
+
+        // 2. Target Display Logic
         const targetBox = document.getElementById('targetBox');
-        if (calculatedTarget > 0) {
+        if (calculatedTarget > 0 && isSecondInning) {
             document.getElementById('targetVal').innerText = calculatedTarget;
             targetBox.style.display = 'block';
         } else {
             targetBox.style.display = 'none';
         }
 
-        // 5. Match Status
+        // 3. Commentary & Rates
+        document.getElementById('liveCommentary').innerText = data.LiveCommentary || data.MatchStatus || "";
+        document.getElementById('crr').innerText = data.CRR || "0.00";
+        document.getElementById('rrr').innerText = data.RRR || "--";
         document.getElementById('scoreStatus').innerText = data.ScoreStatus || "";
 
-        // 6. Over Level Summary
-        const currentOverNum = Math.floor(parseFloat(data.Overs || data.Team1Overs || 0));
+        // 4. Over Summary
+        const currentOverNum = Math.floor(activeScore.overs);
         document.getElementById('overTitle').innerText = `Over ${currentOverNum || '--'}`;
 
         let ballsArr = [
@@ -316,7 +335,7 @@
         document.getElementById('ballsList').innerHTML = ballsHTML || '<span>-</span>';
         document.getElementById('overTotal').innerText = `= ${overTotalRuns}`;
 
-        // 7. Batsmen Stats
+        // 5. Batsmen Stats
         let batsmenHTML = `
             <tr>
                 <td>${data.Player1 || '--'} <span class="striker-icon">🏏</span></td>
@@ -335,11 +354,11 @@
         `;
         document.getElementById('batsmenBody').innerHTML = batsmenHTML;
 
-        // 8. Partnership & Last Wicket
+        // 6. Partnership & Wicket
         document.getElementById('pshipVal').innerText = data.Partnership || `${data.PartnershipRuns || 0} (${data.PartnershipBalls || 0})`;
         document.getElementById('lastWktVal').innerText = data.LastWicket || `${data.LastWicketPlayer || '--'} ${data.LastWicketRuns || ''}`;
 
-        // 9. Bowler Stats
+        // 7. Bowler Stats
         document.getElementById('bowlerName').innerText = data.Bowler || "--";
         document.getElementById('bowlerWR').innerText = `${data.BowlerWickets || 0}-${data.BowlerRuns || 0}`;
         document.getElementById('bowlerOvers').innerText = data.BowlerOvers || "0.0";

@@ -467,18 +467,113 @@
         return target > 0 && (rrr > 0 || chaseText);
     }
 
-    function getBallRuns(ballText) {
-        const b = normalize(ballText);
-        if (!b) return 0;
+  function getBallRuns(ballText) {
+    let b = normalize(ballText);
+    if (!b) return 0;
 
-        // W, wd, nb etc me agar leading number ho to usse add karenge.
-        const n = parseInt(b, 10);
-        if (!isNaN(n)) return n;
+    // Spaces hatao: "2 WD" -> "2wd"
+    b = b.replace(/\s+/g, '');
 
-        // Common textual extras.
-        if (b === 'wd' || b === 'wide' || b === 'nb' || b === 'noball' || b === 'no ball') return 1;
+    // Normal runs: 0, 1, 2, 3, 4, 6
+    if (/^\d+$/.test(b)) {
+        return parseInt(b, 10);
+    }
+
+    // Wicket without run
+    if (
+        b === 'w' ||
+        b === 'wk' ||
+        b === 'wicket'
+    ) {
         return 0;
     }
+
+    // Single wide
+    // WD / WIDE / WB = 1 run
+    if (
+        b === 'wd' ||
+        b === 'wide' ||
+        b === 'wb' ||
+        b === 'w.b'
+    ) {
+        return 1;
+    }
+
+    // Multiple wides:
+    // 2WD = 2
+    // 3WD = 3
+    // 5WB = 5
+    let match = b.match(/^(\d+)(wd|wide|wb|w\.b)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Single No Ball = 1
+    if (
+        b === 'nb' ||
+        b === 'noball' ||
+        b === 'no-ball'
+    ) {
+        return 1;
+    }
+
+    // Multiple / total no-ball runs:
+    // 2NB = 2
+    // 3NB = 3
+    match = b.match(/^(\d+)(nb|noball|no-ball)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Byes:
+    // B = 1
+    // 2B = 2
+    // 4B = 4
+    if (b === 'b' || b === 'bye') {
+        return 1;
+    }
+
+    match = b.match(/^(\d+)(b|bye|byes)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Leg Byes:
+    // LB = 1
+    // 2LB = 2
+    // 4LB = 4
+    if (b === 'lb' || b === 'legbye' || b === 'legbyes') {
+        return 1;
+    }
+
+    match = b.match(/^(\d+)(lb|legbye|legbyes)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Wicket + runs:
+    // W+1 = 1
+    // W+2 = 2
+    // 1+W = 1
+    match = b.match(/^w\+(\d+)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    match = b.match(/^(\d+)\+w$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Last fallback:
+    // agar text ke start me number hai to use total maan lo
+    const leadingNumber = parseInt(b, 10);
+    if (!isNaN(leadingNumber)) {
+        return leadingNumber;
+    }
+
+    return 0;
+}
 
     socket.on('connect', () => {
         console.log('Socket connected:', socket.id);

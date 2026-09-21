@@ -345,6 +345,10 @@ app.get('/scorecard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/main', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'main.html'));
+});
+
 const activeMatches = new Map();
 let globalPollerInterval = null;
 

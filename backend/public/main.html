@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Scorecard</title>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0b1118; color: #ffffff; padding: 10px; font-size: 13px; }
+        
+        .score-card {
+            background: #121b26;
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        /* UPCOMING MATCH UI */
+        .upcoming-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 15px;
+            text-align: center;
+            background: #121b26;
+            border-radius: 10px;
+        }
+
+        .upcoming-team { font-size: 16px; font-weight: 700; color: #ffffff; flex: 1; }
+        .upcoming-status-center { flex: 1.2; }
+        .upcoming-title { font-size: 15px; color: #10b981; font-weight: 700; margin-bottom: 4px; }
+        .upcoming-time { font-size: 13px; color: #9ca3af; font-weight: 600; }
+
+        /* LIVE SCORECARD */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .match-title { font-size: 15px; font-weight: 700; color: #ffffff; }
+        
+        .main-score-box { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px; }
+        .team-name { font-size: 16px; font-weight: 700; color: #cbd5e1; }
+        
+        .score-row { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+        .score-val { font-size: 28px; font-weight: 800; color: #10b981; }
+        .overs-val { font-size: 15px; color: #9ca3af; font-weight: 600; }
+        
+        .event-status { font-size: 22px; font-weight: 800; color: #facc15; text-align: right; line-height: 1.1; }
+
+        .rates-target-bar { 
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; color: #9ca3af; margin: 12px 0 6px 0; font-weight: 600; 
+        }
+        .rates-left { display: flex; gap: 10px; }
+        .target-val { color: #ffffff; font-weight: 700; }
+
+        .status-msg { font-size: 13px; color: #facc15; text-align: center; margin: 8px 0 12px 0; font-weight: 700; }
+
+        .over-summary {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #0d1520; padding: 8px 12px; border-radius: 6px;
+            margin-bottom: 12px; font-weight: 700; font-size: 13px;
+        }
+        .balls-inline { display: flex; gap: 10px; color: #ffffff; }
+        .over-total { color: #ffffff; font-weight: 800; }
+
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .stats-table th { text-align: right; color: #9ca3af; font-size: 11px; padding-bottom: 6px; font-weight: 600; }
+        .stats-table th:first-child { text-align: left; }
+        .stats-table td { text-align: right; padding: 4px 0; font-weight: 600; font-size: 13px; color: #e2e8f0; }
+        .stats-table td:first-child { text-align: left; color: #fff; }
+        
+        .striker-icon { color: #f97316; margin-left: 3px; font-size: 11px; }
+
+        .extra-stats-box { 
+            display: flex; justify-content: space-between; 
+            margin: 14px 0 10px 0; padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.06); 
+            color: #9ca3af; font-size: 12px; font-weight: 600;
+        }
+
+        .bowler-table-container { margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="score-card">
+
+    <!-- 1. UPCOMING MATCH UI CONTAINER -->
+    <div id="upcomingSection" class="upcoming-box" style="display: none;">
+        <div class="upcoming-team" id="upTeam1">--</div>
+        <div class="upcoming-status-center">
+            <div class="upcoming-title">Starts At</div>
+            <div class="upcoming-time" id="upMatchTime">--</div>
+        </div>
+        <div class="upcoming-team" id="upTeam2">--</div>
+    </div>
+
+    <!-- 2. LIVE SCORECARD CONTAINER -->
+    <div id="liveSection" style="display: block;">
+        <div class="header">
+            <span class="match-title" id="matchHeader">Loading Match...</span>
+        </div>
+
+        <div class="main-score-box">
+            <div>
+                <div class="team-name" id="activeTeam">--</div>
+                <div class="score-row">
+                    <span class="score-val" id="teamScore">0-0</span>
+                    <span class="overs-val" id="teamOvers">0.0</span>
+                </div>
+            </div>
+            <div class="event-status" id="liveCommentary">--</div>
+        </div>
+
+        <div class="rates-target-bar">
+            <div class="rates-left">
+                <div>CRR: <span id="crr" style="color:#fff">0.00</span></div>
+                <div id="rrrBox">RRR: <span id="rrr" style="color:#fff">--</span></div>
+            </div>
+            <div id="targetBox" style="display: none;">
+                Target: <span class="target-val" id="targetVal">0</span>
+            </div>
+        </div>
+
+        <div class="status-msg" id="scoreStatus">--</div>
+
+        <div class="over-summary">
+            <span style="color:#9ca3af;" id="overTitle">Over --</span>
+            <div class="balls-inline" id="ballsList"></div>
+            <div class="over-total" id="overTotal">= 0</div>
+        </div>
+
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Batter</th>
+                    <th>R (B)</th>
+                    <th>4s</th>
+                    <th>6s</th>
+                    <th>SR</th>
+                </tr>
+            </thead>
+            <tbody id="batsmenBody"></tbody>
+        </table>
+
+        <div class="bowler-table-container">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Bowler</th>
+                        <th>W-R</th>
+                        <th>Over</th>
+                        <th>Econ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="bowlerName">--</td>
+                        <td id="bowlerWR">0-0</td>
+                        <td id="bowlerOvers">0.0</td>
+                        <td id="bowlerEcon">0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://score.vkmster.com/socket.io/socket.io.js"></script>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchName = urlParams.get('matchName') || "Sri Lanka Women v Pakistan Women";
+    const date = urlParams.get('date') || "2026-07-28";
+
+    document.getElementById('matchHeader').innerText = matchName;
+
+    const socket = io('https://score.vkmster.com');
+
+    // Previous packet ko remember karenge. Isse pata chalega kis team ka score badla.
+    let previousScoreState = null;
+    let lastDetectedBattingTeam = null; // 1 = Team1, 2 = Team2
+
+    function formatUpcomingTime(timeStr) {
+        if (!timeStr) return "Today 07:30 PM";
+        try {
+            const dateObj = new Date(timeStr);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+        } catch (e) {}
+        return timeStr;
+    }
+
+    // Handles: "ENG 321-6 (67.1)", "321-6 (67.1)", "133-10 (33.5)"
+    function parseScoreObj(scoreStr) {
+        if (!scoreStr || typeof scoreStr !== 'string') {
+            return {
+                runs: 0,
+                wickets: 0,
+                overs: 0,
+                scoreOnly: '0-0',
+                oversOnly: '0.0',
+                raw: ''
+            };
+        }
+
+        const raw = scoreStr.trim();
+        const oversMatch = raw.match(/\((.*?)\)/);
+        const oversOnly = oversMatch ? oversMatch[1].trim() : '0.0';
+
+        const cleanStr = raw.replace(/\(.*?\)/g, '').trim();
+        const parts = cleanStr.split(/\s+/);
+        const scoreOnly = parts[parts.length - 1] || '0-0';
+
+        const runWkt = scoreOnly.split('-');
+        const runs = parseInt(runWkt[0], 10) || 0;
+        const wickets = parseInt(runWkt[1], 10) || 0;
+        const overs = parseFloat(oversOnly) || 0;
+
+        return { runs, wickets, overs, scoreOnly, oversOnly, raw };
+    }
+
+    function normalize(value) {
+        return (value ?? '').toString().trim().toLowerCase();
+    }
+
+    function hasRealScore(score) {
+        if (!score || !score.raw) return false;
+        return score.runs > 0 || score.wickets > 0 || score.overs > 0;
+    }
+
+    function statusHasTeam(status, fullName, shortName) {
+        const s = normalize(status);
+        const full = normalize(fullName);
+        const short = normalize(shortName);
+
+        if (full && s.includes(full)) return true;
+
+        // Short name ko word boundary jaisa check karo, taaki ENG kisi random word me match na ho.
+        if (short && short.length >= 2) {
+            const escaped = short.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            try {
+                if (new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(s)) return true;
+            } catch (e) {
+                if (s.includes(short)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    function scoreChanged(oldScore, newScore) {
+        if (!oldScore || !newScore) return false;
+
+        return (
+            Number(oldScore.runs) !== Number(newScore.runs) ||
+            Number(oldScore.wickets) !== Number(newScore.wickets) ||
+            String(oldScore.oversOnly) !== String(newScore.oversOnly)
+        );
+    }
+
+    function makeBattingResult(teamNumber, data, t1, t2, reason) {
+        if (teamNumber === 2) {
+            lastDetectedBattingTeam = 2;
+            return {
+                team: 2,
+                name: data.Team2Name_Short || data.Team2Name || 'Team 2',
+                score: t2,
+                reason
+            };
+        }
+
+        lastDetectedBattingTeam = 1;
+        return {
+            team: 1,
+            name: data.Team1Name_Short || data.Team1Name || 'Team 1',
+            score: t1,
+            reason
+        };
+    }
+
+    // T20 + ODI + Test ke liye maximum-accuracy frontend detector.
+    function detectBattingTeam(data, t1, t2) {
+        const team1Name = data.Team1Name || 'Team 1';
+        const team2Name = data.Team2Name || 'Team 2';
+        const team1Short = data.Team1Name_Short || team1Name;
+        const team2Short = data.Team2Name_Short || team2Name;
+
+        const status = normalize(
+            data.ScoreStatus ||
+            data.MatchStatus ||
+            data.Message ||
+            data.NRMsg ||
+            ''
+        );
+
+        const inning = parseInt(data.CurrentInning || '1', 10) || 1;
+        const rrr = parseFloat(data.RRR || '0') || 0;
+        const target = parseInt(data.Target || '0', 10) || 0;
+
+        // 1) Agar backend kabhi explicit batting-team field bheje, wahi final truth hai.
+        const explicit = normalize(
+            data.BattingTeam ||
+            data.BattingTeamName ||
+            data.BattingTeamShort ||
+            data.CurrentBattingTeam ||
+            data.CurrentBattingTeamName ||
+            data.BattingSide ||
+            ''
+        );
+
+        if (explicit) {
+            if (explicit === normalize(team1Name) || explicit === normalize(team1Short)) {
+                return makeBattingResult(1, data, t1, t2, 'explicit batting team');
+            }
+            if (explicit === normalize(team2Name) || explicit === normalize(team2Short)) {
+                return makeBattingResult(2, data, t1, t2, 'explicit batting team');
+            }
+        }
+
+        // 2) Strongest frontend signal: previous socket packet se jis team ka score/over/wicket badla.
+        if (previousScoreState) {
+            const t1Changed = scoreChanged(previousScoreState.t1, t1);
+            const t2Changed = scoreChanged(previousScoreState.t2, t2);
+
+            if (t1Changed && !t2Changed) {
+                return makeBattingResult(1, data, t1, t2, 'team1 score changed');
+            }
+            if (t2Changed && !t1Changed) {
+                return makeBattingResult(2, data, t1, t2, 'team2 score changed');
+            }
+        }
+
+        // 3) ODI/T20 chase text: "Australia need...", "India require...", "Pakistan to win..."
+        const chaseRegex = /\b(need|needs|require|requires|required|to win|runs needed)\b/i;
+        if (chaseRegex.test(status)) {
+            if (statusHasTeam(status, team1Name, team1Short)) {
+                return makeBattingResult(1, data, t1, t2, 'team1 chase status');
+            }
+            if (statusHasTeam(status, team2Name, team2Short)) {
+                return makeBattingResult(2, data, t1, t2, 'team2 chase status');
+            }
+        }
+
+        // 4) Test match text: "England lead by..." / "India trail by..."
+        const testStatus = /\b(lead|leads|leading|trail|trails|trailing)\b/i.test(status);
+        if (testStatus) {
+            if (statusHasTeam(status, team1Name, team1Short)) {
+                return makeBattingResult(1, data, t1, t2, 'team1 lead/trail status');
+            }
+            if (statusHasTeam(status, team2Name, team2Short)) {
+                return makeBattingResult(2, data, t1, t2, 'team2 lead/trail status');
+            }
+        }
+
+        // 5) One side all-out aur doosri live/non-all-out hai.
+        if (t1.wickets >= 10 && t2.wickets < 10 && t2.raw) {
+            return makeBattingResult(2, data, t1, t2, 'team1 all out');
+        }
+        if (t2.wickets >= 10 && t1.wickets < 10 && t1.raw) {
+            return makeBattingResult(1, data, t1, t2, 'team2 all out');
+        }
+
+        // 6) First innings: sirf jis side ka actual score start hua hai, wahi batting.
+        if (inning === 1) {
+            const t1Started = hasRealScore(t1);
+            const t2Started = hasRealScore(t2);
+
+            if (t1Started && !t2Started) {
+                return makeBattingResult(1, data, t1, t2, 'first innings team1 started');
+            }
+            if (t2Started && !t1Started) {
+                return makeBattingResult(2, data, t1, t2, 'first innings team2 started');
+            }
+        }
+
+        // 7) Limited-over chase: RRR + Target dono valid hon.
+        // Target field ko akela trust nahi karte, kyunki Test feed me stale Target aa sakta hai.
+        if (rrr > 0 && target > 0) {
+            // First innings total commonly target-1 hota hai.
+            if (t1.runs === target - 1 && t2.runs < target) {
+                return makeBattingResult(2, data, t1, t2, 'team2 chasing team1 target');
+            }
+            if (t2.runs === target - 1 && t1.runs < target) {
+                return makeBattingResult(1, data, t1, t2, 'team1 chasing team2 target');
+            }
+
+            // Agar status me team nahi hai, innings 2+ aur dono scores hain, completed total ko infer karo.
+            // 20/50 over completed score ko preference.
+            const t1LikelyCompleted = t1.wickets >= 10 || t1.overs >= 20;
+            const t2LikelyCompleted = t2.wickets >= 10 || t2.overs >= 20;
+
+            if (t1LikelyCompleted && !t2LikelyCompleted) {
+                return makeBattingResult(2, data, t1, t2, 'team2 chase fallback');
+            }
+            if (t2LikelyCompleted && !t1LikelyCompleted) {
+                return makeBattingResult(1, data, t1, t2, 'team1 chase fallback');
+            }
+        }
+
+        // 8) Sirf ek score actually available hai.
+        if (t1.raw && !t2.raw) {
+            return makeBattingResult(1, data, t1, t2, 'only team1 score exists');
+        }
+        if (t2.raw && !t1.raw) {
+            return makeBattingResult(2, data, t1, t2, 'only team2 score exists');
+        }
+
+        // 9) Sirf ek side me activity hai.
+        const t1Active = hasRealScore(t1);
+        const t2Active = hasRealScore(t2);
+
+        if (t1Active && !t2Active) {
+            return makeBattingResult(1, data, t1, t2, 'only team1 active');
+        }
+        if (t2Active && !t1Active) {
+            return makeBattingResult(2, data, t1, t2, 'only team2 active');
+        }
+
+        // 10) Previous detected team ko hold karo, UI flip-flop nahi karegi.
+        if (lastDetectedBattingTeam === 1) {
+            return makeBattingResult(1, data, t1, t2, 'previous batting team');
+        }
+        if (lastDetectedBattingTeam === 2) {
+            return makeBattingResult(2, data, t1, t2, 'previous batting team');
+        }
+
+        // 11) Absolute fallback. Smaller-overs rule use nahi karte.
+        // First packet me backend koi batting-team signal na de to ye sirf best-effort fallback hai.
+        if (inning === 1) {
+            // First innings me jis side ka score non-zero/active hai usko preference.
+            if (t2Active && !t1Active) return makeBattingResult(2, data, t1, t2, 'first packet fallback');
+            return makeBattingResult(1, data, t1, t2, 'first packet fallback');
+        }
+
+        // Later innings me all-out/completed score se opposite side ko prefer karo.
+        if (t1.wickets >= 10 && t2.wickets < 10) {
+            return makeBattingResult(2, data, t1, t2, 'later innings fallback');
+        }
+        if (t2.wickets >= 10 && t1.wickets < 10) {
+            return makeBattingResult(1, data, t1, t2, 'later innings fallback');
+        }
+
+        // Last resort: Team1. Next scoreUpdate me score-change detector correct kar dega.
+        return makeBattingResult(1, data, t1, t2, 'final fallback');
+    }
+
+    function isRealChase(data) {
+        const status = normalize(data.ScoreStatus || data.MatchStatus || '');
+        const rrr = parseFloat(data.RRR || '0') || 0;
+        const target = parseInt(data.Target || '0', 10) || 0;
+
+        // Target alone enough nahi hai; Test feeds stale Target bhej sakti hain.
+        const chaseText = /\b(need|needs|require|requires|required|to win|runs needed)\b/i.test(status);
+        return target > 0 && (rrr > 0 || chaseText);
+    }
+
+  function getBallRuns(ballText) {
+    let b = normalize(ballText);
+    if (!b) return 0;
+
+    // Spaces hatao: "2 WD" -> "2wd"
+    b = b.replace(/\s+/g, '');
+
+    // Normal runs: 0, 1, 2, 3, 4, 6
+    if (/^\d+$/.test(b)) {
+        return parseInt(b, 10);
+    }
+
+    // Wicket without run
+    if (
+        b === 'w' ||
+        b === 'wk' ||
+        b === 'wicket'
+    ) {
+        return 0;
+    }
+
+    // Single wide
+    // WD / WIDE / WB = 1 run
+    if (
+        b === 'wd' ||
+        b === 'wide' ||
+        b === 'wb' ||
+        b === 'w.b'
+    ) {
+        return 1;
+    }
+
+    // Multiple wides:
+    // 2WD = 2
+    // 3WD = 3
+    // 5WB = 5
+    let match = b.match(/^(\d+)(wd|wide|wb|w\.b)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Single No Ball = 1
+    if (
+        b === 'nb' ||
+        b === 'noball' ||
+        b === 'no-ball'
+    ) {
+        return 1;
+    }
+
+    // Multiple / total no-ball runs:
+    // 2NB = 2
+    // 3NB = 3
+    match = b.match(/^(\d+)(nb|noball|no-ball)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Byes:
+    // B = 1
+    // 2B = 2
+    // 4B = 4
+    if (b === 'b' || b === 'bye') {
+        return 1;
+    }
+
+    match = b.match(/^(\d+)(b|bye|byes)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Leg Byes:
+    // LB = 1
+    // 2LB = 2
+    // 4LB = 4
+    if (b === 'lb' || b === 'legbye' || b === 'legbyes') {
+        return 1;
+    }
+
+    match = b.match(/^(\d+)(lb|legbye|legbyes)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Wicket + runs:
+    // W+1 = 1
+    // W+2 = 2
+    // 1+W = 1
+    match = b.match(/^w\+(\d+)$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    match = b.match(/^(\d+)\+w$/i);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+
+    // Last fallback:
+    // agar text ke start me number hai to use total maan lo
+    const leadingNumber = parseInt(b, 10);
+    if (!isNaN(leadingNumber)) {
+        return leadingNumber;
+    }
+
+    return 0;
+}
+
+    socket.on('connect', () => {
+        console.log('Socket connected:', socket.id);
+        socket.emit('joinMatch', { matchName, date });
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+    });
+
+    socket.on('scoreUpdate', (data) => {
+        if (!data) return;
+
+        const liveSection = document.getElementById('liveSection');
+        const upcomingSection = document.getElementById('upcomingSection');
+
+        // UPCOMING MATCH
+        if (data.isLive === false) {
+            liveSection.style.display = 'none';
+            upcomingSection.style.display = 'flex';
+
+            const teams = (data.eventName || matchName).split(/\s+v(?:s|\/s)?\s+/i);
+            document.getElementById('upTeam1').innerText = teams[0] ? teams[0].trim() : 'Team A';
+            document.getElementById('upTeam2').innerText = teams[1] ? teams[1].trim() : 'Team B';
+            document.getElementById('upMatchTime').innerText = `Today ${formatUpcomingTime(data.eventTime)}`;
+            return;
+        }
+
+        upcomingSection.style.display = 'none';
+        liveSection.style.display = 'block';
+
+        const t1 = parseScoreObj(data.Team1Score || data.Team1OnlyScore || '');
+        const t2 = parseScoreObj(data.Team2Score || data.Team2OnlyScore || '');
+
+        const batting = detectBattingTeam(data, t1, t2);
+        const activeScore = batting.score || t1;
+
+        console.log('Batting detection:', {
+            team: batting.name,
+            reason: batting.reason,
+            inning: data.CurrentInning,
+            team1: t1.raw,
+            team2: t2.raw,
+            status: data.ScoreStatus,
+            target: data.Target,
+            rrr: data.RRR
+        });
+
+        // ACTIVE TEAM + SCORE
+        document.getElementById('activeTeam').innerText = batting.name || '--';
+        document.getElementById('teamScore').innerText = activeScore.scoreOnly || '0-0';
+        document.getElementById('teamOvers').innerText = activeScore.oversOnly || '0.0';
+
+        // TARGET + RRR: only real limited-over chase me show honge.
+        const targetBox = document.getElementById('targetBox');
+        const rrrBox = document.getElementById('rrrBox');
+        const realChase = isRealChase(data);
+        const target = parseInt(data.Target || '0', 10) || 0;
+        const rrr = parseFloat(data.RRR || '0') || 0;
+
+        if (realChase && target > 0) {
+            document.getElementById('targetVal').innerText = target;
+            targetBox.style.display = 'block';
+        } else {
+            targetBox.style.display = 'none';
+        }
+
+        if (realChase && rrr > 0) {
+            document.getElementById('rrr').innerText = data.RRR;
+            rrrBox.style.display = 'block';
+        } else {
+            rrrBox.style.display = 'none';
+        }
+
+        // CRR + STATUS
+        document.getElementById('crr').innerText = data.CRR || '0.00';
+        document.getElementById('scoreStatus').innerText = data.ScoreStatus || '';
+        document.getElementById('liveCommentary').innerText = data.LiveCommentary || data.MatchStatus || '';
+
+        // CURRENT OVER
+        const currentOverNum = Math.floor(activeScore.overs || 0);
+        document.getElementById('overTitle').innerText = `Over ${currentOverNum || '--'}`;
+
+        const ballsArr = [
+            data.CurrentOverBalls1,
+            data.CurrentOverBalls2,
+            data.CurrentOverBalls3,
+            data.CurrentOverBalls4,
+            data.CurrentOverBalls5,
+            data.CurrentOverBalls6
+        ];
+
+        let ballsHTML = '';
+        let overTotalRuns = 0;
+
+        ballsArr.forEach((b) => {
+            if (b !== undefined && b !== null && b.toString().trim() !== '') {
+                const bStr = b.toString().trim();
+                ballsHTML += `<span>${bStr}</span>`;
+                overTotalRuns += getBallRuns(bStr);
+            }
+        });
+
+        document.getElementById('ballsList').innerHTML = ballsHTML || '<span>-</span>';
+        document.getElementById('overTotal').innerText = `= ${overTotalRuns}`;
+
+        // BATSMEN
+        // Feed me jis player ke naam me * ho, usko striker icon denge.
+        const p1Raw = (data.Player1 || '--').toString();
+        const p2Raw = (data.Player2 || '--').toString();
+        const p1Striker = p1Raw.includes('*');
+        const p2Striker = p2Raw.includes('*');
+        const p1Name = p1Raw.replace(/\*/g, '').trim() || '--';
+        const p2Name = p2Raw.replace(/\*/g, '').trim() || '--';
+
+        const batsmenHTML = `
+            <tr>
+                <td>${p1Name}${p1Striker ? ' <span class="striker-icon">🏏</span>' : ''}</td>
+                <td>${data.Player1Run || 0} (${data.Player1Balls || 0})</td>
+                <td>${data.Player1Fours || 0}</td>
+                <td>${data.Player1Sixes || 0}</td>
+                <td>${data.Player1StrikeRate || '0.0'}</td>
+            </tr>
+            <tr>
+                <td>${p2Name}${p2Striker ? ' <span class="striker-icon">🏏</span>' : ''}</td>
+                <td>${data.Player2Run || 0} (${data.Player2Balls || 0})</td>
+                <td>${data.Player2Fours || 0}</td>
+                <td>${data.Player2Sixes || 0}</td>
+                <td>${data.Player2StrikeRate || '0.0'}</td>
+            </tr>
+        `;
+        document.getElementById('batsmenBody').innerHTML = batsmenHTML;
+
+        // BOWLER -- tumhare socket ke actual singular field names bhi support kiye.
+        document.getElementById('bowlerName').innerText = data.Bowler || '--';
+        document.getElementById('bowlerWR').innerText =
+            `${data.BowlerWicket ?? data.BowlerWickets ?? 0}-${data.BowlerRun ?? data.BowlerRuns ?? 0}`;
+        document.getElementById('bowlerOvers').innerText =
+            data.BowlerOver ?? data.BowlerOvers ?? '0.0';
+        document.getElementById('bowlerEcon').innerText = data.BowlerEconomy || '0.00';
+
+        // IMPORTANT: current packet ko END me save karo.
+        previousScoreState = {
+            t1: {
+                runs: t1.runs,
+                wickets: t1.wickets,
+                oversOnly: t1.oversOnly
+            },
+            t2: {
+                runs: t2.runs,
+                wickets: t2.wickets,
+                oversOnly: t2.oversOnly
+            }
+        };
+    });
+</script>
+
+</body>
+</html>

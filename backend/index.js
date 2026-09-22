@@ -412,7 +412,7 @@ async function fetchScoreForMatch(matchRoom, matchDetails) {
         const response = await axios.get(`${API_BASE_URL}/getScore?matchId=${eventId}`, { timeout: 3000 });
         
         if (response.data && response.data.success) {
-            const scoreObj = response.data.data.ScoreData?.Score;
+            const scoreObj = response.data.data?.Data?.Score;
             
             // 🔥 Check if match has actual live score data
             if (scoreObj && scoreObj.length > 0 && (scoreObj[0].Team1Score || scoreObj[0].Team2Score)) {

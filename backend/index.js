@@ -882,194 +882,128 @@ async function findMatchEventDetails(
    FETCH SCORE FOR MATCH
 ============================================================ */
 
-async function fetchScoreForMatch(
-    matchRoom,
-    matchDetails
-) {
-
+async function fetchScoreForMatch(matchRoom, matchDetails) {
     try {
-
-        const {
-            eventId,
-            eventTime
-        } = matchDetails;
-
+        const { eventId, eventTime } = matchDetails;
 
         console.log(
-            `🏏 Fetching Score | ` +
-            `${matchDetails.matchName} | ` +
-            `ID: ${eventId}`
+            `🏏 Fetching Score | ${matchDetails.matchName} | ID: ${eventId}`
         );
 
+        const response = await axios.get(
+            `${API_BASE_URL}/getScore?matchId=${eventId}`,
+            {
+                timeout: 3000
+            }
+        );
 
-        const response =
-            await axios.get(
-                `${API_BASE_URL}/getScore?matchId=${eventId}`,
-                {
-                    timeout: 3000
-                }
-            );
+        // console.log(
+        //     `📦 SCORE API RESPONSE ${eventId}:`,
+        //     JSON.stringify(response.data)
+        // );
 
+        if (!response.data ) {
+            console.log(`❌ Score API success false | ID: ${eventId}`);
+            return;
+        }
+
+        // ========================================================
+        // SUPPORT MULTIPLE API RESPONSE FORMATS
+        // ========================================================
+
+        const scoreObj =
+            response.data?.data?.Data?.Score ||
+            response.data?.data?.ScoreData?.Score ||
+            response.data?.Data?.Score ||
+            response.data?.ScoreData?.Score ||
+            [];
+
+            console.log(scoreObj?.data?.Data?.Score,"dfghjkl;")
+
+        console.log(
+            `📊 SCORE ARRAY | ID: ${eventId}:`,
+            scoreObj
+        );
 
         if (
-            response.data &&
-            response.data.success
+            Array.isArray(scoreObj) &&
+            scoreObj.length > 0
         ) {
+            const rawScore = scoreObj[0];
 
-            const scoreObj =
-                response.data.data
-                    ?.Data
-                    ?.Score;
+            /*
+             * IMPORTANT:
+             *
+             * Score API ne actual Score object diya hai
+             * to frontend ko wahi pura object bhejna hai.
+             *
+             * Frontend already Team1Score, Team2Score,
+             * CurrentInning, Player1, Player2 etc handle karta hai.
+             */
 
-
-            /* =================================================
-               LIVE SCORE AVAILABLE
-            ================================================= */
-
-            if (
-                scoreObj &&
-                scoreObj.length > 0 &&
-                (
-                    scoreObj[0].Team1Score ||
-                    scoreObj[0].Team2Score
-                )
-            ) {
-
-                const scoreData = {
-
-                    ...scoreObj[0],
-
-                    isLive: true
-
-                };
-
-
-                /* =============================================
-                   SAVE SCORE IN REDIS
-                ============================================= */
-
-                await redis.set(
-                    `score:${matchRoom}`,
-                    JSON.stringify(
-                        scoreData
-                    ),
-                    'EX',
-                    60
-                );
-
-
-                /* =============================================
-                   SEND SCORE TO MATCH ROOM
-                ============================================= */
-
-                io
-                    .to(matchRoom)
-                    .emit(
-                        'scoreUpdate',
-                        scoreData
-                    );
-
-
-                return {
-                    matchRoom,
-                    status: 'success'
-                };
-
-            }
-
-
-            /* =================================================
-               MATCH FOUND BUT NOT LIVE
-            ================================================= */
-
-            const upcomingData = {
-
-                isLive: false,
-
-                eventName:
-                    matchDetails.matchName,
-
-                eventTime:
-                    eventTime
-
+            const scoreData = {
+                ...rawScore,
+                isLive: true
             };
 
+            await redis.set(
+                `score:${matchRoom}`,
+                JSON.stringify(scoreData),
+                'EX',
+                60
+            );
 
-            io
-                .to(matchRoom)
-                .emit(
-                    'scoreUpdate',
-                    upcomingData
-                );
+            io.to(matchRoom).emit(
+                'scoreUpdate',
+                scoreData
+            );
 
+            console.log(
+                `✅ SCORE SENT | ${matchDetails.matchName} | ID: ${eventId}`
+            );
 
             return {
                 matchRoom,
                 status: 'success'
             };
-
         }
 
+        // ========================================================
+        // SCORE ARRAY NAHI MILA
+        // ========================================================
 
-        /* =====================================================
-           API RESPONSE SUCCESS FALSE
-        ===================================================== */
+        console.log(
+            `⚠️ Score data empty | ${matchDetails.matchName} | ID: ${eventId}`
+        );
 
-        io
-            .to(matchRoom)
-            .emit(
-                'scoreUpdate',
-                {
-
-                    isLive: false,
-
-                    eventName:
-                        matchDetails.matchName,
-
-                    eventTime:
-                        matchDetails.eventTime
-
-                }
-            );
-
+        io.to(matchRoom).emit(
+            'scoreUpdate',
+            {
+                isLive: false,
+                eventName: matchDetails.matchName,
+                eventTime
+            }
+        );
 
         return {
             matchRoom,
-            status: 'no-score'
+            status: 'upcoming'
         };
 
-
     } catch (error) {
-
         console.error(
-            `❌ Score fetch failed | ` +
-            `${matchDetails.matchName} | ` +
-            `ID: ${matchDetails.eventId} |`,
-            error.message
+            `❌ SCORE API ERROR | ${matchDetails.matchName} | ID: ${matchDetails.eventId}`,
+            error?.response?.data || error.message
         );
 
-
-        /* =====================================================
-           FALLBACK TO UPCOMING UI
-        ===================================================== */
-
-        io
-            .to(matchRoom)
-            .emit(
-                'scoreUpdate',
-                {
-
-                    isLive: false,
-
-                    eventName:
-                        matchDetails.matchName,
-
-                    eventTime:
-                        matchDetails.eventTime
-
-                }
-            );
-
+        io.to(matchRoom).emit(
+            'scoreUpdate',
+            {
+                isLive: false,
+                eventName: matchDetails.matchName,
+                eventTime: matchDetails.eventTime
+            }
+        );
 
         return {
             matchRoom,

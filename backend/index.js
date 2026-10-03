@@ -591,19 +591,21 @@ let globalPollerInterval = null;
 ============================================================ */
 
 const HARDCODED_MATCHES = {
-
-    "mpumalanga rhinos v tuskers": {
-        eventId: 36134092
+    "bangladesh v sri lanka": {
+        eventId: 36139329
     },
 
-    "knights v titans": {
-        eventId: 36131081
+    "pakistan v india": {
+        eventId: 36139325
     },
 
-    "lions v north west dragons": {
-        eventId: 36127463
+    "india v west indies": {
+        eventId: 36137653
+    },
+
+    "zimbabwe w v west indies w": {
+        eventId: 36135356
     }
-
 };
 
 
@@ -918,7 +920,6 @@ async function fetchScoreForMatch(matchRoom, matchDetails) {
             response.data?.ScoreData?.Score ||
             [];
 
-            console.log(scoreObj?.data?.Data?.Score,"dfghjkl;")
 
         console.log(
             `📊 SCORE ARRAY | ID: ${eventId}:`,
